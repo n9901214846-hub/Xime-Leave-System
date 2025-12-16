@@ -57,95 +57,93 @@
       <a href="index.html" style="color:#b00020; font-weight:800; text-decoration:none;">Go to Login</a>
     </div>
   </div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-apiKey: "AIzaSyBPL_w65JDPFRMJ6ngiHkWMLFe5neymsPY",
-  authDomain: "xime-leave-system-3835d.firebaseapp.com",
-  projectId: "xime-leave-system-3835d",
-  storageBucket: "xime-leave-system-3835d.firebasestorage.app",
-  messagingSenderId: "375808256510",
-  appId: "1:375808256510:web:f0245d768f631285d6b8af"
-      
-};
+    apiKey: "AIzaSyBPL_w65JDPFRMJ6ngiHkWMLFe5neymsPY",
+    authDomain: "xime-leave-system-3835d.firebaseapp.com",
+    projectId: "xime-leave-system-3835d",
+    storageBucket: "xime-leave-system-3835d.firebasestorage.app",
+    messagingSenderId: "375808256510",
+    appId: "1:375808256510:web:f0245d768f631285d6b8af"
+  };
 
   firebase.initializeApp(firebaseConfig);
 </script>
 
-  <script type="module">
-   const auth = firebase.auth();
-const db = firebase.firestore();
+<script>
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
+  const msg = document.getElementById("msg");
+  const form = document.getElementById("registerForm");
 
-    const msg = document.getElementById("msg");
-    const form = document.getElementById("registerForm");
+  function isAllowedDomain(email) {
+    return email.toLowerCase().endsWith("@xime.org");
+  }
 
-    function isAllowedDomain(email) {
-      return email.toLowerCase().endsWith("@xime.org");
+  async function isAuthorized(email) {
+    // After account creation, user is signed in, so Firestore reads should be allowed by your rules.
+    const s = await db.collection("students_roster").doc(email).get();
+    if (s.exists) return { ok: true, role: "student" };
+
+    const a = await db.collection("approvers").doc(email).get();
+    if (a.exists) return { ok: true, role: "approver" };
+
+    return { ok: false, role: "" };
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.textContent = "";
+    msg.style.color = "#000";
+
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+      msg.textContent = "Enter email and password.";
+      msg.style.color = "crimson";
+      return;
     }
 
-    async function isAuthorized(email) {
-      // After account creation, user is signed in, so Firestore reads should be allowed by your rules.
-      const s = await getDoc(doc(db, "students_roster", email));
-      if (s.exists()) return { ok: true, role: "student" };
-
-      const a = await getDoc(doc(db, "approvers", email));
-      if (a.exists()) return { ok: true, role: "approver" };
-
-      return { ok: false, role: "" };
+    if (!isAllowedDomain(email)) {
+      msg.textContent = "Only @xime.org emails are allowed.";
+      msg.style.color = "crimson";
+      return;
     }
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      msg.textContent = "";
-      msg.style.color = "#000";
+    try {
+      // Create Auth account (Firebase auto signs-in after this)
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
 
-      const email = document.getElementById("email").value.trim().toLowerCase();
-      const password = document.getElementById("password").value;
+      // Now verify authorization from Firestore (roster/approvers)
+      const authz = await isAuthorized(email);
 
-      if (!email || !password) {
-        msg.textContent = "Enter email and password.";
+      if (!authz.ok) {
+        // Not in roster/approvers -> delete the auth account immediately
+        await cred.user.delete();
+        await auth.signOut();
+        msg.textContent = "This email is not authorized (not in roster/approvers).";
         msg.style.color = "crimson";
         return;
       }
 
-      if (!isAllowedDomain(email)) {
-        msg.textContent = "Only @xime.org emails are allowed.";
-        msg.style.color = "crimson";
-        return;
-      }
+      msg.textContent = "Account created ✅ Redirecting…";
+      msg.style.color = "green";
 
-      try {
-        // Create Auth account (Firebase auto signs-in after this)
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
+      // Go to router; router will send student/approver to correct dashboard
+      window.location.href = "router.html";
 
-        // Now verify authorization from Firestore (roster/approvers)
-        const authz = await isAuthorized(email);
-
-        if (!authz.ok) {
-          // Not in roster/approvers -> delete the auth account immediately
-          await deleteUser(cred.user);
-          await signOut(auth);
-          msg.textContent = "This email is not authorized (not in roster/approvers).";
-          msg.style.color = "crimson";
-          return;
-        }
-
-        msg.textContent = "Account created ✅ Redirecting…";
-        msg.style.color = "green";
-
-        // Go to router; router will send student/approver to correct dashboard
-        window.location.href = "router.html";
-
-      } catch (err) {
-        msg.textContent = "Register failed: " + err.message;
-        msg.style.color = "crimson";
-      }
-    });
-  </script>
+    } catch (err) {
+      msg.textContent = "Register failed: " + err.message;
+      msg.style.color = "crimson";
+    }
+  });
+</script>
 </body>
 </html>
-
