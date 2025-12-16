@@ -1,0 +1,541 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XIME Leave – Student</title>
+
+  <style>
+    :root{
+      --red:#b00020;
+      --bg:#f6f6f8;
+      --card:#ffffff;
+      --muted:#666;
+      --border:#e8e8ee;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin:0;
+      background:var(--bg);
+      color:#111;
+    }
+
+    .topbar{
+      background:var(--red);
+      color:#fff;
+      padding:16px 18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .topbar h1{
+      margin:0;
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+
+    .topbar .sub{
+      font-size:12px;
+      opacity:.9;
+      font-weight:700;
+      margin-top:2px;
+    }
+
+    .btn{
+      border:none;
+      padding:10px 12px;
+      border-radius:10px;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    .btn.red{ background:var(--red); color:#fff; }
+    .btn.ghost{ background:#fff; color:var(--red); border:1px solid rgba(255,255,255,.75); }
+
+    .wrap{
+      max-width:980px;
+      margin:16px auto;
+      padding:0 16px 24px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    @media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.04);
+    }
+
+    .card h2{
+      margin:0 0 10px 0;
+      font-size:16px;
+      color:var(--red);
+    }
+
+    .muted{ color:var(--muted); font-size:12px; }
+
+    .profileBox{
+      font-size:18px;
+      line-height:1.75;
+      font-weight:900;
+      color:#111;
+    }
+    .profileBox b{ color:#111; }
+
+    label{
+      display:block;
+      font-weight:900;
+      font-size:12px;
+      margin-bottom:6px;
+    }
+
+    input, textarea{
+      width:100%;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid #ddd;
+      outline:none;
+      background:#fff;
+      font-size:14px;
+    }
+
+    input{ height:46px; }
+    textarea{ min-height:90px; resize:vertical; }
+
+    .row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      align-items:end;
+    }
+    @media(max-width:700px){ .row{ grid-template-columns:1fr; } }
+
+    .msg{
+      font-weight:900;
+      margin-top:10px;
+      font-size:13px;
+    }
+
+    .req{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      margin:12px 0;
+      background:#fff;
+    }
+
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:12px;
+      display:inline-block;
+    }
+    .pill.pending{ background:#fff4e5; color:#8a4b00; border:1px solid #ffe1bd; }
+    .pill.approved{ background:#e9fff0; color:#0a7a18; border:1px solid #bff1c9; }
+    .pill.rejected{ background:#ffecec; color:#a30014; border:1px solid #ffc9d0; }
+
+    a{ color:var(--red); font-weight:900; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    .divider{ height:1px; background:var(--border); margin:12px 0; }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div>
+      <h1>Xavier Institute of Management and Entrepreneurship, Chennai</h1>
+      <div class="sub">Students Leave Portal – Student Dashboard</div>
+    </div>
+    <button id="logout" class="btn ghost">Logout</button>
+  </div>
+
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h2>My Profile</h2>
+        <div id="profile" class="muted">Loading profile…</div>
+      </div>
+
+      <div class="card">
+        <h2>Apply Leave</h2>
+
+        <form id="leaveForm" autocomplete="off">
+          <!-- anti-autofill -->
+          <input type="text" autocomplete="username" style="display:none">
+          <input type="password" autocomplete="new-password" style="display:none">
+
+          <div class="row">
+            <div>
+              <label>Out Date</label>
+              <input id="outDate" type="date" required autocomplete="off" />
+            </div>
+            <div>
+              <label>Out Time (24-hr)</label>
+              <input id="outTime" type="time" required autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <div>
+              <label>In Date</label>
+              <input id="inDate" type="date" required autocomplete="off" />
+            </div>
+            <div>
+              <label>In Time (24-hr)</label>
+              <input id="inTime" type="time" required autocomplete="off" />
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <label>Reason/Place</label>
+            <textarea id="reason" required autocomplete="off"></textarea>
+          </div>
+
+          <div style="margin-top:12px;">
+            <label>Contact number</label>
+            <input id="contact" type="tel" inputmode="numeric" maxlength="10" required autocomplete="off" />
+          </div>
+
+          <button id="submitBtn" type="submit" class="btn red" style="width:100%; margin-top:14px;">
+            Submit Leave Request
+          </button>
+        </form>
+
+        <div id="msg" class="msg"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h2>My Requests (Latest first)</h2>
+      <div id="myRequests" class="muted">Loading…</div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ===== APPROVERS (EDIT EMAILS HERE) =====
+    const APPROVERS = {
+      bothi: { email: "bothichandar@xime.org", name: "Bothi" },
+      sneha: { email: "snehaprabha@xime.org", name: "Sneha" },
+      arul:  { email: "arulmary@xime.org", name: "Arul" }
+    };
+
+    // ✅ normalized email constants (important!)
+    const BOTHI_EMAIL = APPROVERS.bothi.email.toLowerCase().trim();
+    const SNEHA_EMAIL = APPROVERS.sneha.email.toLowerCase().trim();
+    const ARUL_EMAIL  = APPROVERS.arul.email.toLowerCase().trim();
+
+    import { auth, db } from "./firebase.js";
+    import { onAuthStateChanged, signOut } from "firebase/auth";
+    import {
+      doc, getDoc, collection, addDoc,
+      query, where, getDocs
+    } from "firebase/firestore";
+
+    const profileDiv = document.getElementById("profile");
+    const msg = document.getElementById("msg");
+    const myRequestsDiv = document.getElementById("myRequests");
+    const leaveForm = document.getElementById("leaveForm");
+    const submitBtn = document.getElementById("submitBtn");
+
+    let student = null;
+    let studentEmail = "";
+
+    function setMsg(text, color="#111"){
+      msg.textContent = text;
+      msg.style.color = color;
+    }
+
+    function pillClass(status) {
+      const s = String(status || "").trim().toLowerCase();
+      if (s === "approved") return "pill approved";
+      if (s === "rejected") return "pill rejected";
+      return "pill pending";
+    }
+
+    function norm(x) { return String(x || "").trim().toLowerCase(); }
+
+    function getHostelType(hostelRaw) {
+      const h = norm(hostelRaw);
+      if (h.includes("boys")) return "BOYS";
+      if (h.includes("girls")) return "GIRLS";
+      if (h.includes("guest")) return "GUEST";
+      return "UNKNOWN";
+    }
+
+    function getBatchNo(batchRaw) {
+      const b = norm(batchRaw);
+      if (b.includes("batch 8") || b === "8") return 8;
+      if (b.includes("batch 9") || b === "9") return 9;
+      return null;
+    }
+
+    function computeAssignedApprovers(studentObj) {
+      const set = new Set();
+      const hostelType = getHostelType(studentObj.hostel);
+      const batchNo = getBatchNo(studentObj.batch);
+
+      // Hostel based
+      if (hostelType === "BOYS") set.add(BOTHI_EMAIL);
+      if (hostelType === "GIRLS") set.add(SNEHA_EMAIL);
+      if (hostelType === "GUEST") set.add(ARUL_EMAIL);
+
+      // Batch coordinator
+      if (batchNo === 8) set.add(BOTHI_EMAIL);
+      if (batchNo === 9) set.add(ARUL_EMAIL);
+
+      return Array.from(set).filter(Boolean);
+    }
+
+    function initApproverDecisions(assignedEmails) {
+      const obj = {};
+      for (const email of assignedEmails) {
+        const lower = String(email).toLowerCase().trim();
+        const name =
+          lower === BOTHI_EMAIL ? APPROVERS.bothi.name :
+          lower === SNEHA_EMAIL ? APPROVERS.sneha.name :
+          lower === ARUL_EMAIL  ? APPROVERS.arul.name  :
+          lower;
+
+        obj[lower] = { name, decision: "Pending", remark: "", time: "" };
+      }
+      return obj;
+    }
+
+    function buildStatusSummary(approverDecisions) {
+      const parts = [];
+      for (const [email, d] of Object.entries(approverDecisions || {})) {
+        parts.push(`${d.name || email}: ${d.decision || "Pending"}`);
+      }
+      return parts.join(" | ");
+    }
+
+    function monthKeyFromDateStr(dateStr) {
+      return (dateStr && dateStr.length >= 7) ? dateStr.slice(0,7) : "";
+    }
+
+    async function hasPendingFinalRequest() {
+      const q = query(
+        collection(db, "leave_requests"),
+        where("studentEmail", "==", studentEmail),
+        where("finalStatus", "==", "Pending")
+      );
+      const snap = await getDocs(q);
+      return !snap.empty;
+    }
+
+    async function countApprovedForMonth(monthKey) {
+      const q = query(
+        collection(db, "leave_requests"),
+        where("studentEmail", "==", studentEmail),
+        where("finalStatus", "==", "Approved"),
+        where("monthKey", "==", monthKey)
+      );
+      const snap = await getDocs(q);
+      return snap.size;
+    }
+
+    async function loadMyRequests() {
+      myRequestsDiv.textContent = "Loading…";
+
+      try {
+        const q = query(
+          collection(db, "leave_requests"),
+          where("studentEmail", "==", studentEmail)
+        );
+
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          myRequestsDiv.textContent = "No requests yet.";
+          return;
+        }
+
+        const items = [];
+        snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+        items.sort((a,b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+
+        myRequestsDiv.innerHTML = items.map(r => {
+          const isApproved = String(r.finalStatus || "").trim().toLowerCase() === "approved";
+          const summary = buildStatusSummary(r.approverDecisions || {});
+          const gateLink = isApproved
+            ? `<div class="divider"></div>
+               <a href="gatepass.html?id=${r.id}" target="_blank">View Gate Pass</a>`
+            : "";
+
+          return `
+            <div class="req">
+              <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+                <div class="${pillClass(r.finalStatus)}">${r.finalStatus || "Pending"}</div>
+                <div class="muted">Req ID: ${r.id}</div>
+              </div>
+
+              <div style="margin-top:10px;">
+                <b>Out:</b> ${r.outDate || "-"} ${r.outTime || "-"}
+                &nbsp; <b>In:</b> ${r.inDate || "-"} ${r.inTime || "-"}
+              </div>
+
+              <div style="margin-top:8px;"><b>Reason/Place:</b> ${r.reason || "-"}</div>
+              <div style="margin-top:8px;"><b>Approver Status:</b> ${summary || "-"}</div>
+
+              ${gateLink}
+            </div>
+          `;
+        }).join("");
+
+      } catch (err) {
+        console.error("❌ loadMyRequests crashed:", err);
+        myRequestsDiv.textContent = "Failed to load requests. Open console.";
+      }
+    }
+
+    // ---------- AUTH ----------
+    onAuthStateChanged(auth, async (user) => {
+      leaveForm.reset();
+      setMsg("");
+      myRequestsDiv.textContent = "Loading…";
+
+      if (!user) {
+        location.href = "index.html";
+        return;
+      }
+
+      studentEmail = user.email.toLowerCase().trim();
+
+      const snap = await getDoc(doc(db, "students_roster", studentEmail));
+      if (!snap.exists()) {
+        await signOut(auth);
+        location.href = "not-authorized.html";
+        return;
+      }
+
+      student = snap.data();
+
+      profileDiv.className = "profileBox";
+      profileDiv.innerHTML = `
+        <div><b>Name:</b> ${student.name}</div>
+        <div><b>Email:</b> ${student.email}</div>
+        <div><b>Batch:</b> ${student.batch}</div>
+        <div><b>Hostel:</b> ${student.hostel}</div>
+      `;
+
+      await loadMyRequests();
+    });
+
+    // ---------- SUBMIT ----------
+    leaveForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMsg("");
+
+      if (!student) {
+        setMsg("Profile not loaded. Please refresh.", "crimson");
+        return;
+      }
+
+      const outDate = document.getElementById("outDate").value;
+      const outTime = document.getElementById("outTime").value;
+      const inDate  = document.getElementById("inDate").value;
+      const inTime  = document.getElementById("inTime").value;
+      const reason  = document.getElementById("reason").value.trim();
+      const contact = document.getElementById("contact").value.trim();
+
+      if (!outDate || !outTime || !inDate || !inTime) {
+        setMsg("Please fill Out Date/Time and In Date/Time.", "crimson");
+        return;
+      }
+
+      if (inDate < outDate) {
+        setMsg("In Date cannot be before Out Date.", "crimson");
+        return;
+      }
+
+      if (!/^\d{10}$/.test(contact)) {
+        setMsg("Enter a valid 10-digit contact number.", "crimson");
+        return;
+      }
+
+      if (!reason) {
+        setMsg("Please enter Reason/Place.", "crimson");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting…";
+
+      try {
+        if (await hasPendingFinalRequest()) {
+          setMsg("You already have a pending request. Wait until it becomes Approved/Rejected.", "crimson");
+          return;
+        }
+
+        const monthKey = monthKeyFromDateStr(outDate);
+        const approvedCount = await countApprovedForMonth(monthKey);
+        if (approvedCount >= 2) {
+          setMsg(`Monthly limit reached: 2 approved leaves already for ${monthKey}.`, "crimson");
+          return;
+        }
+
+        const assignedApproverEmails = computeAssignedApprovers(student);
+        if (!assignedApproverEmails.length) {
+          setMsg("No approver mapping found. Contact admin.", "crimson");
+          return;
+        }
+
+        const approverDecisions = initApproverDecisions(assignedApproverEmails);
+
+        const newReq = {
+          studentEmail,
+          studentName: student.name,
+          batch: student.batch,
+          hostel: student.hostel,
+
+          outDate, outTime, inDate, inTime,
+          reason, contact,
+
+          monthKey,
+          assignedApproverEmails,
+          approverDecisions,
+          finalStatus: "Pending",
+
+          createdAtMs: Date.now(),
+          updatedAtMs: Date.now()
+        };
+
+        await addDoc(collection(db, "leave_requests"), newReq);
+
+        setMsg("Leave request submitted ✅", "green");
+        leaveForm.reset();
+        await loadMyRequests();
+
+      } catch (err) {
+        console.error("❌ submit failed:", err);
+        setMsg("Error submitting: " + (err?.message || err), "crimson");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Leave Request";
+      }
+    });
+
+    // ---------- LOGOUT ----------
+    document.getElementById("logout").addEventListener("click", async () => {
+      await signOut(auth);
+      location.href = "index.html";
+    });
+  </script>
+</body>
+</html>

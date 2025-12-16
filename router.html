@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Routing...</title>
+</head>
+<body>
+  <h3>Routing you...</h3>
+  <p id="msg">Checking your access...</p>
+
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import { onAuthStateChanged, signOut } from "firebase/auth";
+    import { doc, getDoc } from "firebase/firestore";
+
+    const msg = document.getElementById("msg");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "/login.html";
+        return;
+      }
+
+      
+      const email = (user.email || "").toLowerCase();
+
+      try {
+        // 1) Check approver
+        const approverRef = doc(db, "approvers", email);
+        const approverSnap = await getDoc(approverRef);
+        if (approverSnap.exists() && approverSnap.data()?.isActive === true) {
+          window.location.href = "/approver.html";
+          return;
+        }
+
+        // 2) Check student roster
+        const studentRef = doc(db, "students_roster", email);
+        const studentSnap = await getDoc(studentRef);
+        if (studentSnap.exists() && studentSnap.data()?.isActive === true) {
+          window.location.href = "/student.html";
+          return;
+        }
+
+        // 3) Not authorized
+        await signOut(auth);
+        window.location.href = "/not-authorized.html";
+      } catch (e) {
+        msg.textContent = "Error checking access: " + (e?.message || e);
+      }
+    });
+  </script>
+</body>
+</html>

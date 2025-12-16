@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XIME Leave System – Register</title>
+</head>
+
+<body style="font-family: Arial, sans-serif; background:#f6f6f8; padding:40px;">
+
+  <div style="max-width:420px; margin:auto; background:#fff; padding:26px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.08); border:1px solid #eee;">
+    <div style="text-align:center; margin-bottom:14px;">
+      <div style="font-weight:900; font-size:14px; letter-spacing:0.3px; color:#b00020;">
+        Xavier Institute of Management and Entrepreneurship, Chennai
+      </div>
+      <div style="font-weight:900; font-size:22px; margin-top:6px;">
+        Students Leave Portal
+      </div>
+      <div style="color:#666; margin-top:6px; font-size:13px;">
+        Register only with your <b>@xime.org</b> email.
+      </div>
+    </div>
+
+    <h3 style="margin:14px 0 10px 0; color:#b00020;">Create Account</h3>
+
+    <form id="registerForm">
+      <label style="font-weight:700;">Email</label><br/>
+      <input
+        type="email"
+        id="email"
+        required
+        placeholder="yourname@xime.org"
+        style="width:100%; padding:11px; margin:8px 0 14px 0; border-radius:10px; border:1px solid #ddd; outline:none;"
+      />
+
+      <label style="font-weight:700;">Password</label><br/>
+      <input
+        type="password"
+        id="password"
+        required
+        placeholder="Create a strong password"
+        style="width:100%; padding:11px; margin:8px 0 14px 0; border-radius:10px; border:1px solid #ddd; outline:none;"
+      />
+
+      <button
+        type="submit"
+        style="width:100%; padding:12px; border-radius:10px; background:#b00020; color:#fff; font-weight:800; border:none; cursor:pointer;"
+      >
+        Register
+      </button>
+    </form>
+
+    <p id="msg" style="margin-top:12px; font-weight:700;"></p>
+
+    <div style="margin-top:16px; padding-top:14px; border-top:1px solid #eee; text-align:center;">
+      <span style="color:#444;">Already registered?</span>
+      <a href="index.html" style="color:#b00020; font-weight:800; text-decoration:none;">Go to Login</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase.js";
+    import {
+      createUserWithEmailAndPassword,
+      signOut,
+      deleteUser
+    } from "firebase/auth";
+    import { doc, getDoc } from "firebase/firestore";
+
+    const msg = document.getElementById("msg");
+    const form = document.getElementById("registerForm");
+
+    function isAllowedDomain(email) {
+      return email.toLowerCase().endsWith("@xime.org");
+    }
+
+    async function isAuthorized(email) {
+      // After account creation, user is signed in, so Firestore reads should be allowed by your rules.
+      const s = await getDoc(doc(db, "students_roster", email));
+      if (s.exists()) return { ok: true, role: "student" };
+
+      const a = await getDoc(doc(db, "approvers", email));
+      if (a.exists()) return { ok: true, role: "approver" };
+
+      return { ok: false, role: "" };
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "";
+      msg.style.color = "#000";
+
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        msg.textContent = "Enter email and password.";
+        msg.style.color = "crimson";
+        return;
+      }
+
+      if (!isAllowedDomain(email)) {
+        msg.textContent = "Only @xime.org emails are allowed.";
+        msg.style.color = "crimson";
+        return;
+      }
+
+      try {
+        // Create Auth account (Firebase auto signs-in after this)
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+        // Now verify authorization from Firestore (roster/approvers)
+        const authz = await isAuthorized(email);
+
+        if (!authz.ok) {
+          // Not in roster/approvers -> delete the auth account immediately
+          await deleteUser(cred.user);
+          await signOut(auth);
+          msg.textContent = "This email is not authorized (not in roster/approvers).";
+          msg.style.color = "crimson";
+          return;
+        }
+
+        msg.textContent = "Account created ✅ Redirecting…";
+        msg.style.color = "green";
+
+        // Go to router; router will send student/approver to correct dashboard
+        window.location.href = "router.html";
+
+      } catch (err) {
+        msg.textContent = "Register failed: " + err.message;
+        msg.style.color = "crimson";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - XIME Leave System</title>
+</head>
+<body>
+  <h2>Login</h2>
+
+  <form id="loginForm">
+    <label>Email:</label><br/>
+    <input id="email" type="email" placeholder="yourname@xime.org" required /><br/><br/>
+
+    <label>Password:</label><br/>
+    <input id="password" type="password" placeholder="Your password" required /><br/><br/>
+
+    <button type="submit">Login</button>
+  </form>
+
+  <button id="forgotBtn" style="margin-top:10px;">Forgot Password</button>
+
+  <p id="msg"></p>
+  <p>New user? <a href="/register.html">Register</a></p>
+
+  <script type="module">
+    import { auth } from "./firebase.js";
+    import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+
+    const form = document.getElementById("loginForm");
+    const msg = document.getElementById("msg");
+    const forgotBtn = document.getElementById("forgotBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "";
+
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "/router.html";
+
+      } catch (err) {
+        msg.textContent = err.message;
+      }
+    });
+
+    forgotBtn.addEventListener("click", async () => {
+      msg.textContent = "";
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      if (!email) {
+        msg.textContent = "Enter your email first, then click Forgot Password.";
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        msg.textContent = "Password reset email sent ✅";
+      } catch (err) {
+        msg.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>

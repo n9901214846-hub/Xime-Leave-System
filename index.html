@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XIME Students Leave Portal</title>
+
+  <style>
+    :root{ --red:#b00020; --light:#fff5f5; }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--light);
+    }
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .card{
+      width:100%;
+      max-width:420px;
+      background:#fff;
+      border-radius:18px;
+      padding:26px;
+      box-shadow:0 12px 35px rgba(0,0,0,.08);
+      border:1px solid #ffd0d0;
+    }
+    h1{
+      font-size:18px;
+      margin:6px 0 10px;
+      color:#111;
+      line-height:1.35;
+    }
+    .brand{
+      font-weight:900;
+      color:var(--red);
+      letter-spacing:.4px;
+    }
+    label{ font-weight:800; font-size:14px; }
+    input{
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid #ffd0d0;
+      margin-top:6px;
+      outline:none;
+    }
+    button{
+      width:100%;
+      padding:12px;
+      border-radius:12px;
+      border:none;
+      cursor:pointer;
+      font-weight:900;
+      background:var(--red);
+      color:#fff;
+    }
+    a{
+      color:var(--red);
+      font-weight:900;
+      text-decoration:none;
+    }
+    a:hover{ text-decoration:underline; }
+    .msg{
+      margin-top:12px;
+      padding:10px;
+      border-radius:12px;
+      font-size:13px;
+      background:#fff1f1;
+      border:1px dashed #ffc1c1;
+      color:#7a0000;
+      min-height:20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">XIME</div>
+
+      <h1>
+        Xavier Institute of Management and Entrepreneurship, Chennai<br/>
+        Students Leave Portal
+      </h1>
+
+      <form id="loginForm" autocomplete="off">
+        <!-- dummy fields to avoid browser autofill weirdness -->
+        <input type="text" autocomplete="off" style="display:none;">
+        <input type="password" autocomplete="off" style="display:none;">
+
+        <label>Email</label>
+        <input id="email" type="email" placeholder="yourname@xime.org" autocomplete="off" required>
+
+        <br/><br/>
+
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Your password" autocomplete="off" required>
+
+        <br/><br/>
+
+        <button type="submit">Login</button>
+      </form>
+
+      <div style="margin-top:14px;">
+        <a href="register.html">New user? Register here</a>
+      </div>
+
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth } from "./firebase.js";
+    import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+
+    const msg = document.getElementById("msg");
+
+    // ✅ Always start fresh: log out any previous session silently
+    signOut(auth).catch(()=>{});
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "";
+
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "router.html";
+      } catch (err) {
+        msg.textContent = "Login failed: " + (err?.message || err);
+      }
+    });
+  </script>
+</body>
+</html>
