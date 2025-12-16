@@ -54,6 +54,7 @@
       padding:12px; border-radius:14px; font-weight:900;
     }
     .printbar{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
+
     .btn{
       padding:10px 12px; border-radius:12px; border:none; cursor:pointer; font-weight:900;
     }
@@ -68,136 +69,135 @@
       Loading gate pass…
     </div>
   </div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-apiKey: "AIzaSyBPL_w65JDPFRMJ6ngiHkWMLFe5neymsPY",
-  authDomain: "xime-leave-system-3835d.firebaseapp.com",
-  projectId: "xime-leave-system-3835d",
-  storageBucket: "xime-leave-system-3835d.firebasestorage.app",
-  messagingSenderId: "375808256510",
-  appId: "1:375808256510:web:f0245d768f631285d6b8af"
-      
-};
+    apiKey: "AIzaSyBPL_w65JDPFRMJ6ngiHkWMLFe5neymsPY",
+    authDomain: "xime-leave-system-3835d.firebaseapp.com",
+    projectId: "xime-leave-system-3835d",
+    storageBucket: "xime-leave-system-3835d.firebasestorage.app",
+    messagingSenderId: "375808256510",
+    appId: "1:375808256510:web:f0245d768f631285d6b8af"
+  };
 
   firebase.initializeApp(firebaseConfig);
 </script>
 
-  <script type="module">
-   const auth = firebase.auth();
-const db = firebase.firestore();
+<script>
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-    const content = document.getElementById("content");
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
+  const content = document.getElementById("content");
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
 
-    function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    function approverRows(map){
-      const entries = Object.entries(map || {});
-      if (!entries.length) return `<div class="muted">No approver info.</div>`;
-      return entries.map(([email, d]) => {
-        const name = d.name || email;
-        const decision = d.decision || "Pending";
-        const cls = decision === "Approved" ? "pill approved" : "pill";
-        return `
-          <div class="row">
-            <div>
-              <div style="font-weight:900">${esc(name)}</div>
-              <div class="muted">${esc(email)}</div>
-            </div>
-            <div class="${cls}">${esc(decision)}</div>
+  function approverRows(map){
+    const entries = Object.entries(map || {});
+    if (!entries.length) return `<div class="muted">No approver info.</div>`;
+    return entries.map(([email, d]) => {
+      const name = d.name || email;
+      const decision = d.decision || "Pending";
+      const cls = decision === "Approved" ? "pill approved" : "pill";
+      return `
+        <div class="row">
+          <div>
+            <div style="font-weight:900">${esc(name)}</div>
+            <div class="muted">${esc(email)}</div>
           </div>
-        `;
-      }).join("");
+          <div class="${cls}">${esc(decision)}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { window.location.href = "index.html"; return; }
+    if (!id) {
+      content.innerHTML = `<div class="warn">Missing gate pass ID.</div>`;
+      return;
     }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = "index.html"; return; }
-      if (!id) {
-        content.innerHTML = `<div class="warn">Missing gate pass ID.</div>`;
-        return;
-      }
+    const snap = await db.collection("leave_requests").doc(id).get();
+    if (!snap.exists) {
+      content.innerHTML = `<div class="warn">Gate pass not found.</div>`;
+      return;
+    }
 
-      const snap = await getDoc(doc(db, "leave_requests", id));
-      if (!snap.exists()) {
-        content.innerHTML = `<div class="warn">Gate pass not found.</div>`;
-        return;
-      }
+    const r = snap.data();
 
-      const r = snap.data();
-
-      if (r.finalStatus !== "Approved") {
-        content.innerHTML = `
-          <div class="header">
-            <div>
-              <div class="title">XIME Gate Pass</div>
-              <div class="sub">Students Leave Portal</div>
-            </div>
-            <div class="id">Req ID: ${esc(id)}</div>
-          </div>
-          <div class="warn">Gate pass is available only after final approval (both approvers Approved).</div>
-          <div class="muted" style="margin-top:10px;">
-            Current Status: <b>${esc(r.finalStatus || "Pending")}</b>
-          </div>
-        `;
-        return;
-      }
-
+    if (r.finalStatus !== "Approved") {
       content.innerHTML = `
-        <div class="stamp">APPROVED</div>
-
         <div class="header">
           <div>
-            <div class="title">Xavier Institute of Management and Entrepreneurship, Chennai</div>
-            <div class="sub">Students Leave Portal – Gate Pass</div>
+            <div class="title">XIME Gate Pass</div>
+            <div class="sub">Students Leave Portal</div>
           </div>
           <div class="id">Req ID: ${esc(id)}</div>
         </div>
-
-        <div class="grid">
-          <div class="box">
-            <div class="label">Student Name</div>
-            <div class="value">${esc(r.studentName)}</div>
-            <div class="muted">${esc(r.studentEmail)}</div>
-          </div>
-
-          <div class="box">
-            <div class="label">Batch / Hostel</div>
-            <div class="value">${esc(r.batch)} / ${esc(r.hostel)}</div>
-          </div>
-
-          <div class="box">
-            <div class="label">Out (Leaving campus)</div>
-            <div class="value">${esc(r.outDate)} ${esc(r.outTime)}</div>
-          </div>
-
-          <div class="box">
-            <div class="label">In (Returning to campus)</div>
-            <div class="value">${esc(r.inDate)} ${esc(r.inTime)}</div>
-          </div>
-        </div>
-
-        <div class="box" style="margin-top:12px;">
-          <div class="label">Reason</div>
-          <div class="value" style="font-size:14px; font-weight:800;">${esc(r.reason)}</div>
-        </div>
-
-        <div class="approvers">
-          <div style="font-weight:900; color:var(--red); margin-bottom:8px;">Approvals</div>
-          ${approverRows(r.approverDecisions)}
-        </div>
-
-        <div class="printbar">
-          <button class="btn red" onclick="window.print()">Print / Screenshot</button>
-          <button class="btn gray" onclick="window.location.href='student.html'">Back</button>
+        <div class="warn">Gate pass is available only after final approval (both approvers Approved).</div>
+        <div class="muted" style="margin-top:10px;">
+          Current Status: <b>${esc(r.finalStatus || "Pending")}</b>
         </div>
       `;
-    });
-  </script>
+      return;
+    }
+
+    content.innerHTML = `
+      <div class="stamp">APPROVED</div>
+
+      <div class="header">
+        <div>
+          <div class="title">Xavier Institute of Management and Entrepreneurship, Chennai</div>
+          <div class="sub">Students Leave Portal – Gate Pass</div>
+        </div>
+        <div class="id">Req ID: ${esc(id)}</div>
+      </div>
+
+      <div class="grid">
+        <div class="box">
+          <div class="label">Student Name</div>
+          <div class="value">${esc(r.studentName)}</div>
+          <div class="muted">${esc(r.studentEmail)}</div>
+        </div>
+
+        <div class="box">
+          <div class="label">Batch / Hostel</div>
+          <div class="value">${esc(r.batch)} / ${esc(r.hostel)}</div>
+        </div>
+
+        <div class="box">
+          <div class="label">Out (Leaving campus)</div>
+          <div class="value">${esc(r.outDate)} ${esc(r.outTime)}</div>
+        </div>
+
+        <div class="box">
+          <div class="label">In (Returning to campus)</div>
+          <div class="value">${esc(r.inDate)} ${esc(r.inTime)}</div>
+        </div>
+      </div>
+
+      <div class="box" style="margin-top:12px;">
+        <div class="label">Reason</div>
+        <div class="value" style="font-size:14px; font-weight:800;">${esc(r.reason)}</div>
+      </div>
+
+      <div class="approvers">
+        <div style="font-weight:900; color:var(--red); margin-bottom:8px;">Approvals</div>
+        ${approverRows(r.approverDecisions)}
+      </div>
+
+      <div class="printbar">
+        <button class="btn red" onclick="window.print()">Print / Screenshot</button>
+        <button class="btn gray" onclick="window.location.href='student.html'">Back</button>
+      </div>
+    `;
+  });
+</script>
 </body>
 </html>
-
