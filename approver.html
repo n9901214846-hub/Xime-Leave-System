@@ -133,229 +133,225 @@
       <div id="requests" class="muted">Loading…</div>
     </div>
   </div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-apiKey: "AIzaSyBPL_w65JDPFRMJ6ngiHkWMLFe5neymsPY",
-  authDomain: "xime-leave-system-3835d.firebaseapp.com",
-  projectId: "xime-leave-system-3835d",
-  storageBucket: "xime-leave-system-3835d.firebasestorage.app",
-  messagingSenderId: "375808256510",
-  appId: "1:375808256510:web:f0245d768f631285d6b8af"
-      
-};
+    apiKey: "AIzaSyBPL_w65JDPFRMJ6ngiHkWMLFe5neymsPY",
+    authDomain: "xime-leave-system-3835d.firebaseapp.com",
+    projectId: "xime-leave-system-3835d",
+    storageBucket: "xime-leave-system-3835d.firebasestorage.app",
+    messagingSenderId: "375808256510",
+    appId: "1:375808256510:web:f0245d768f631285d6b8af"
+  };
 
   firebase.initializeApp(firebaseConfig);
 </script>
 
-  <script type="module">
-   const auth = firebase.auth();
-const db = firebase.firestore();
+<script>
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
+  const who = document.getElementById("who");
+  const requestsDiv = document.getElementById("requests");
+  const hint = document.getElementById("hint");
 
-    const who = document.getElementById("who");
-    const requestsDiv = document.getElementById("requests");
-    const hint = document.getElementById("hint");
+  const tabPending = document.getElementById("tabPending");
+  const tabApproved = document.getElementById("tabApproved");
+  const tabRejected = document.getElementById("tabRejected");
 
-    const tabPending = document.getElementById("tabPending");
-    const tabApproved = document.getElementById("tabApproved");
-    const tabRejected = document.getElementById("tabRejected");
+  let approverEmail = "";
+  let approverName = "";
+  let currentTab = "Pending";
+  let cached = [];
 
+  function normalizeDecisionMap(map){
+    const out = {};
+    for (const [k,v] of Object.entries(map || {})) {
+      out[String(k).toLowerCase().trim()] = v || {};
+    }
+    return out;
+  }
 
-    let approverEmail = "";
-    let approverName = "";
-    let currentTab = "Pending";
-    let cached = [];
+  function myDecisionFor(req) {
+    const m = normalizeDecisionMap(req.approverDecisions);
+    return String(m?.[approverEmail]?.decision || "Pending");
+  }
 
-    function normalizeDecisionMap(map){
-      const out = {};
-      for (const [k,v] of Object.entries(map || {})) {
-        out[String(k).toLowerCase().trim()] = v || {};
-      }
-      return out;
+  function pillClass(decision){
+    const d = String(decision || "Pending").toLowerCase();
+    if (d === "approved") return "pill approved";
+    if (d === "rejected") return "pill rejected";
+    return "pill pending";
+  }
+
+  function computeFinalStatus(req, updatedMap){
+    const assigned = (req.assignedApproverEmails || []).map(e => String(e).toLowerCase().trim());
+    const m = normalizeDecisionMap(updatedMap);
+
+    if (!assigned.length) return "Pending";
+
+    const decisions = assigned.map(email =>
+      String(m[email]?.decision || "Pending").toLowerCase()
+    );
+
+    if (decisions.every(d => d === "approved")) return "Approved";
+    if (decisions.every(d => d === "rejected")) return "Rejected";
+    return "Pending";
+  }
+
+  function updateTabCounts(){
+    tabPending.textContent  = `Pending (${cached.filter(r => myDecisionFor(r) === "Pending").length})`;
+    tabApproved.textContent = `Approved (${cached.filter(r => myDecisionFor(r) === "Approved").length})`;
+    tabRejected.textContent = `Rejected (${cached.filter(r => myDecisionFor(r) === "Rejected").length})`;
+  }
+
+  function setActiveTabBtn(){
+    [tabPending, tabApproved, tabRejected].forEach(b => b.classList.remove("active"));
+    if (currentTab === "Pending") tabPending.classList.add("active");
+    if (currentTab === "Approved") tabApproved.classList.add("active");
+    if (currentTab === "Rejected") tabRejected.classList.add("active");
+  }
+
+  async function loadAllAssigned() {
+    requestsDiv.textContent = "Loading…";
+
+    try {
+      const snap = await db
+        .collection("leave_requests")
+        .where("assignedApproverEmails", "array-contains", approverEmail)
+        .get();
+
+      cached = [];
+      snap.forEach(d => cached.push({ id: d.id, ...d.data() }));
+      cached.sort((a,b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+      render();
+    } catch (err) {
+      requestsDiv.textContent = "Load failed";
+      console.error(err);
+    }
+  }
+
+  function render(){
+    updateTabCounts();
+    setActiveTabBtn();
+
+    hint.textContent =
+      currentTab === "Pending"  ? "New requests waiting for your decision." :
+      currentTab === "Approved" ? "You approved these (you can still change to Reject)." :
+      "You rejected these (you can still change to Approve).";
+
+    const list = cached.filter(r => myDecisionFor(r) === currentTab);
+
+    if (!list.length) {
+      requestsDiv.textContent = "No requests in this list.";
+      return;
     }
 
-    function myDecisionFor(req) {
-      const m = normalizeDecisionMap(req.approverDecisions);
-      return String(m?.[approverEmail]?.decision || "Pending");
-    }
+    requestsDiv.innerHTML = list.map(r => {
+      const m = normalizeDecisionMap(r.approverDecisions);
+      const mine = m[approverEmail] || { decision:"Pending", remark:"" };
+      const remarkId = `remark-${r.id}`;
 
-    function pillClass(decision){
-      const d = String(decision || "Pending").toLowerCase();
-      if (d === "approved") return "pill approved";
-      if (d === "rejected") return "pill rejected";
-      return "pill pending";
-    }
-
-    function computeFinalStatus(req, updatedMap){
-      const assigned = (req.assignedApproverEmails || []).map(e => String(e).toLowerCase().trim());
-      const m = normalizeDecisionMap(updatedMap);
-
-      if (!assigned.length) return "Pending";
-
-      const decisions = assigned.map(email =>
-        String(m[email]?.decision || "Pending").toLowerCase()
-      );
-
-      if (decisions.every(d => d === "approved")) return "Approved";
-      if (decisions.every(d => d === "rejected")) return "Rejected";
-      return "Pending";
-    }
-
-    function updateTabCounts(){
-      tabPending.textContent  = `Pending (${cached.filter(r => myDecisionFor(r) === "Pending").length})`;
-      tabApproved.textContent = `Approved (${cached.filter(r => myDecisionFor(r) === "Approved").length})`;
-      tabRejected.textContent = `Rejected (${cached.filter(r => myDecisionFor(r) === "Rejected").length})`;
-    }
-
-    function setActiveTabBtn(){
-      [tabPending, tabApproved, tabRejected].forEach(b => b.classList.remove("active"));
-      if (currentTab === "Pending") tabPending.classList.add("active");
-      if (currentTab === "Approved") tabApproved.classList.add("active");
-      if (currentTab === "Rejected") tabRejected.classList.add("active");
-    }
-
-    async function loadAllAssigned() {
-      requestsDiv.textContent = "Loading…";
-
-      const q = query(
-        collection(db, "leave_requests"),
-        where("assignedApproverEmails", "array-contains", approverEmail)
-      );
-
-      try {
-        const snap = await getDocs(q);
-        cached = [];
-        snap.forEach(d => cached.push({ id: d.id, ...d.data() }));
-        cached.sort((a,b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
-        render();
-      } catch (err) {
-        requestsDiv.textContent = "Load failed";
-        console.error(err);
-      }
-    }
-
-    function render(){
-      updateTabCounts();
-      setActiveTabBtn();
-
-      hint.textContent =
-        currentTab === "Pending"  ? "New requests waiting for your decision." :
-        currentTab === "Approved" ? "You approved these (you can still change to Reject)." :
-        "You rejected these (you can still change to Approve).";
-
-      const list = cached.filter(r => myDecisionFor(r) === currentTab);
-
-      if (!list.length) {
-        requestsDiv.textContent = "No requests in this list.";
-        return;
-      }
-
-      requestsDiv.innerHTML = list.map(r => {
-        const m = normalizeDecisionMap(r.approverDecisions);
-        const mine = m[approverEmail] || { decision:"Pending", remark:"" };
-        const remarkId = `remark-${r.id}`;
-
-        return `
-          <div class="req">
-            <div class="head">
-              <div>
-                <div style="font-weight:1000;">
-                  ${r.studentName}
-                  <span class="muted">(${r.studentEmail})</span>
-                </div>
-                <div class="muted" style="margin-top:4px;">
-                  <b>Batch:</b> ${r.batch} &nbsp; | &nbsp; <b>Hostel:</b> ${r.hostel}
-                </div>
-                <div class="muted" style="margin-top:4px;">
-                  <b>Out:</b> ${r.outDate} ${r.outTime} &nbsp; <b>In:</b> ${r.inDate} ${r.inTime}
-                </div>
+      return `
+        <div class="req">
+          <div class="head">
+            <div>
+              <div style="font-weight:1000;">
+                ${r.studentName}
+                <span class="muted">(${r.studentEmail})</span>
               </div>
-
-              <div style="text-align:right;">
-                <div class="${pillClass(mine.decision)}">${mine.decision}</div>
-                <div class="muted" style="margin-top:6px;">Req ID: ${r.id}</div>
+              <div class="muted" style="margin-top:4px;">
+                <b>Batch:</b> ${r.batch} &nbsp; | &nbsp; <b>Hostel:</b> ${r.hostel}
+              </div>
+              <div class="muted" style="margin-top:4px;">
+                <b>Out:</b> ${r.outDate} ${r.outTime} &nbsp; <b>In:</b> ${r.inDate} ${r.inTime}
               </div>
             </div>
 
-            <div style="margin-top:10px;"><b>Reason:</b> ${r.reason}</div>
-
-            <div style="margin-top:10px;">
-              <textarea id="${remarkId}" placeholder="Remark (optional)">${mine.remark || ""}</textarea>
-            </div>
-
-            <div class="row" style="margin-top:10px;">
-              <button class="btn actionBtnRed" onclick="window.setDecision('${r.id}', 'Approved')">Approve</button>
-              <button class="btn actionBtnWhite" onclick="window.setDecision('${r.id}', 'Rejected')">Reject</button>
+            <div style="text-align:right;">
+              <div class="${pillClass(mine.decision)}">${mine.decision}</div>
+              <div class="muted" style="margin-top:6px;">Req ID: ${r.id}</div>
             </div>
           </div>
-        `;
-      }).join("");
-    }
 
-    window.setDecision = async (requestId, decision) => {
-      const req = cached.find(x => x.id === requestId);
-      if (!req) return alert("Request not found");
+          <div style="margin-top:10px;"><b>Reason:</b> ${r.reason}</div>
 
-      const remark = (document.getElementById(`remark-${requestId}`)?.value || "").trim();
+          <div style="margin-top:10px;">
+            <textarea id="${remarkId}" placeholder="Remark (optional)">${mine.remark || ""}</textarea>
+          </div>
 
-      const updated = normalizeDecisionMap(req.approverDecisions);
-      updated[approverEmail] = {
-        name: approverName,
-        decision,
-        remark,
-        time: new Date().toISOString(),
-        timeMs: Date.now()
-      };
+          <div class="row" style="margin-top:10px;">
+            <button class="btn actionBtnRed" onclick="window.setDecision('${r.id}', 'Approved')">Approve</button>
+            <button class="btn actionBtnWhite" onclick="window.setDecision('${r.id}', 'Rejected')">Reject</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
 
-      const finalStatus = computeFinalStatus(req, updated);
+  window.setDecision = async (requestId, decision) => {
+    const req = cached.find(x => x.id === requestId);
+    if (!req) return alert("Request not found");
 
-      try {
-        await updateDoc(doc(db, "leave_requests", requestId), {
-          approverDecisions: updated,
-          finalStatus,
-          updatedAtMs: Date.now()
-        });
+    const remark = (document.getElementById(`remark-${requestId}`)?.value || "").trim();
 
-        req.approverDecisions = updated;
-        req.finalStatus = finalStatus;
-        render();
-      } catch (err) {
-        alert("Update failed");
-        console.error(err);
-      }
+    const updated = normalizeDecisionMap(req.approverDecisions);
+    updated[approverEmail] = {
+      name: approverName,
+      decision,
+      remark,
+      time: new Date().toISOString(),
+      timeMs: Date.now()
     };
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { location.href = "index.html"; return; }
+    const finalStatus = computeFinalStatus(req, updated);
 
-      approverEmail = user.email.toLowerCase().trim();
+    try {
+      await db.collection("leave_requests").doc(requestId).update({
+        approverDecisions: updated,
+        finalStatus,
+        updatedAtMs: Date.now()
+      });
 
-      const snap = await getDoc(doc(db, "approvers", approverEmail));
-      if (!snap.exists()) {
-        await signOut(auth);
-        location.href = "not-authorized.html";
-        return;
-      }
+      req.approverDecisions = updated;
+      req.finalStatus = finalStatus;
+      render();
+    } catch (err) {
+      alert("Update failed");
+      console.error(err);
+    }
+  };
 
-      approverName = snap.data().name || approverEmail;
-      who.textContent = `Logged in as: ${approverName} (${approverEmail})`;
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) { location.href = "index.html"; return; }
 
-      await loadAllAssigned();
-    });
+    approverEmail = user.email.toLowerCase().trim();
 
-    document.getElementById("logout").addEventListener("click", async () => {
-      await signOut(auth);
-      location.href = "index.html";
-    });
+    const snap = await db.collection("approvers").doc(approverEmail).get();
+    if (!snap.exists) {
+      await auth.signOut();
+      location.href = "not-authorized.html";
+      return;
+    }
 
-    tabPending.onclick  = () => { currentTab = "Pending";  render(); };
-    tabApproved.onclick = () => { currentTab = "Approved"; render(); };
-    tabRejected.onclick = () => { currentTab = "Rejected"; render(); };
-  </script>
+    approverName = snap.data().name || approverEmail;
+    who.textContent = `Logged in as: ${approverName} (${approverEmail})`;
+
+    await loadAllAssigned();
+  });
+
+  document.getElementById("logout").addEventListener("click", async () => {
+    await auth.signOut();
+    location.href = "index.html";
+  });
+
+  tabPending.onclick  = () => { currentTab = "Pending";  render(); };
+  tabApproved.onclick = () => { currentTab = "Approved"; render(); };
+  tabRejected.onclick = () => { currentTab = "Rejected"; render(); };
+</script>
 </body>
 </html>
-
